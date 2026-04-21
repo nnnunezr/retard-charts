@@ -641,15 +641,21 @@ async function handleAuth(e) {
 }
 
 async function handleGoogleLogin() {
+    console.log("Google Login Clicked...");
+    if (!supabaseClient) {
+        showToast("Demo Mode: Google Login not available", true);
+        return;
+    }
     try {
         const { error } = await supabaseClient.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.href
+                redirectTo: window.location.origin
             }
         });
         if (error) throw error;
     } catch (err) {
+        console.error("Google Auth Error:", err);
         authError.style.color = '#ef4444';
         authError.textContent = err.message;
     }
@@ -659,39 +665,45 @@ async function handleLogout() {
     await supabaseClient.auth.signOut();
 }
 
-tabLogin.onclick = () => {
-    isSignUp = false;
-    tabLogin.classList.add('active');
-    tabSignup.classList.remove('active');
-    authSubmitText.textContent = 'Login';
-};
+function setupEventListeners() {
+    if (tabLogin) tabLogin.onclick = () => {
+        isSignUp = false;
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        authSubmitText.textContent = 'Login';
+    };
 
-tabSignup.onclick = () => {
-    isSignUp = true;
-    tabSignup.classList.add('active');
-    tabLogin.classList.remove('active');
-    authSubmitText.textContent = 'Sign Up';
-};
+    if (tabSignup) tabSignup.onclick = () => {
+        isSignUp = true;
+        tabSignup.classList.add('active');
+        tabLogin.classList.remove('active');
+        authSubmitText.textContent = 'Sign Up';
+    };
 
-authForm.onsubmit = handleAuth;
-logoutBtn.onclick = handleLogout;
-document.getElementById('google-login-btn').onclick = handleGoogleLogin;
+    if (authForm) authForm.onsubmit = handleAuth;
+    if (logoutBtn) logoutBtn.onclick = handleLogout;
+    
+    const googleBtn = document.getElementById('google-login-btn');
+    if (googleBtn) {
+        googleBtn.onclick = handleGoogleLogin;
+        console.log("Google button listener attached");
+    }
 
-// --- View Toggling ---
-navDashboard.onclick = () => {
-    dashboardView.style.display = 'block';
-    portfolioView.style.display = 'none';
-    navDashboard.classList.add('active');
-    navPortfolio.classList.remove('active');
-};
+    if (navDashboard) navDashboard.onclick = () => {
+        dashboardView.style.display = 'block';
+        portfolioView.style.display = 'none';
+        navDashboard.classList.add('active');
+        navPortfolio.classList.remove('active');
+    };
 
-navPortfolio.onclick = () => {
-    dashboardView.style.display = 'none';
-    portfolioView.style.display = 'block';
-    navPortfolio.classList.add('active');
-    navDashboard.classList.remove('active');
-    renderPortfolio();
-};
+    if (navPortfolio) navPortfolio.onclick = () => {
+        dashboardView.style.display = 'none';
+        portfolioView.style.display = 'block';
+        navPortfolio.classList.add('active');
+        navDashboard.classList.remove('active');
+        renderPortfolio();
+    };
+}
 
 // --- Portfolio Logic ---
 let stockToBuy = null;
@@ -792,7 +804,10 @@ async function sellStock(id) {
 
 // --- App Initialization ---
 async function init() {
-    // 1. Render initial UI immediately
+    // 1. Setup Listeners
+    setupEventListeners();
+
+    // 2. Render initial UI immediately
     renderCards();
     updateChart();
 
