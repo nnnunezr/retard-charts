@@ -181,6 +181,7 @@ const searchResults = document.getElementById('search-results');
 const aiAnalysisText = document.getElementById('ai-analysis-text');
 const chatInput = document.getElementById('chat-input');
 const sendChatBtn = document.getElementById('send-chat-btn');
+const chatMessages = document.getElementById('chat-messages');
 const authModal = document.getElementById('auth-modal');
 const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
@@ -513,7 +514,7 @@ async function handleChat() {
     if (!text) return;
 
     chatInput.value = '';
-    sendBtn.disabled = true;
+    sendChatBtn.disabled = true;
     
     addMessage(text, true);
     addLoading();
@@ -522,7 +523,7 @@ async function handleChat() {
     
     removeLoading();
     addMessage(response.replace(/\n/g, '<br>'), false, true);
-    sendBtn.disabled = false;
+    sendChatBtn.disabled = false;
 }
 
 async function triggerAIAnalysis(stock) {
@@ -552,7 +553,7 @@ async function triggerAIAnalysis(stock) {
     addMessage(headerHtml, false, true);
 }
 
-sendBtn.addEventListener('click', handleChat);
+sendChatBtn.addEventListener('click', handleChat);
 chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleChat();
 });
