@@ -111,7 +111,9 @@ async function updateLivePrices() {
     // Prepare tickers for TradingView (format: EXCHANGE:SYMBOL)
     // Most S&P 500 are NYSE or NASDAQ
     const tickers = stocksData.map(s => {
-        const exchange = s.exchange || (['NVDA', 'AMD', 'META', 'TSLA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN'].includes(s.symbol) ? 'NASDAQ' : 'NYSE');
+        // Simple heuristic for common tech stocks on NASDAQ, others default to NYSE
+        const nasdaqTickers = ['NVDA', 'AMD', 'META', 'TSLA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NFLX', 'QCOM', 'AVGO'];
+        const exchange = s.exchange || (nasdaqTickers.includes(s.symbol) ? 'NASDAQ' : 'NYSE');
         return `${exchange}:${s.symbol}`;
     });
 
@@ -241,7 +243,8 @@ const chartPlaceholder = document.getElementById('chart-placeholder');
 
 let userLists = { 'Main Watchlist': [] }; 
 let currentListName = 'Main Watchlist';
-let userWatchlist = userLists[currentListName]; // For backwards compatibility during transition
+let chatHistory = [];
+let currentStock = null;
 const welcomeMsg = document.createElement('div');
 welcomeMsg.className = 'toast-notification';
 document.body.appendChild(welcomeMsg);
@@ -602,10 +605,13 @@ async function triggerAIAnalysis(stock) {
     addMessage(headerHtml, false, true);
 }
 
-sendChatBtn.addEventListener('click', handleChat);
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleChat();
-});
+// Chat event listeners
+if (sendChatBtn) sendChatBtn.addEventListener('click', handleChat);
+if (chatInput) {
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleChat();
+    });
+}
 
 // AI Panel Toggle Logic
 const toggleAiBtn = document.getElementById('toggle-ai-btn');
@@ -771,7 +777,10 @@ function setupEventListeners() {
         navDashboard.classList.add('active');
         document.getElementById('nav-watchlist').classList.remove('active');
         
-        // Hide chart when going back to main overview
+        // Remove active class from lists
+        document.querySelectorAll('#user-lists-container li').forEach(el => el.classList.remove('active'));
+        
+        // Hide chart
         if (chartSection) chartSection.style.display = 'none';
         if (chartPlaceholder) chartPlaceholder.style.display = 'block';
         currentStock = null;
@@ -784,7 +793,9 @@ function setupEventListeners() {
         navWatchlist.classList.add('active');
         navDashboard.classList.remove('active');
         
-        // Hide chart when going to watchlist overview
+        // Remove active class from lists
+        document.querySelectorAll('#user-lists-container li').forEach(el => el.classList.remove('active'));
+
         if (chartSection) chartSection.style.display = 'none';
         if (chartPlaceholder) chartPlaceholder.style.display = 'block';
         currentStock = null;
@@ -857,12 +868,14 @@ function loadListsFromDB() {
 
 // Update toggleWatchlist to work with specific lists
 async function toggleWatchlist(symbol) {
-    if (userWatchlist.includes(symbol)) {
-        userWatchlist = userWatchlist.filter(s => s !== symbol);
-        userLists[currentListName] = userWatchlist;
+    if (!userLists[currentListName]) userLists[currentListName] = [];
+    
+    if (userLists[currentListName].includes(symbol)) {
+        userLists[currentListName] = userLists[currentListName].filter(s => s !== symbol);
+        showToast(`Removed ${symbol} from ${currentListName}`, true);
     } else {
-        userWatchlist.push(symbol);
-        userLists[currentListName] = userWatchlist;
+        userLists[currentListName].push(symbol);
+        showToast(`Added ${symbol} to ${currentListName}`);
     }
     
     saveListsToDB();
@@ -870,21 +883,20 @@ async function toggleWatchlist(symbol) {
     renderWatchlistView();
 }
 
-if (addListBtn) addListBtn.onclick = createNewList;
-
-// --- Watchlist Rendering ---
 function renderWatchlistView() {
     if (!portfolioList) return;
     portfolioList.innerHTML = '';
     
-    if (userWatchlist.length === 0) {
+    const currentList = userLists[currentListName] || [];
+    
+    if (currentList.length === 0) {
         portfolioList.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px;">List "${currentListName}" is empty. Add some stocks from the overview!</td></tr>`;
         watchlistCount.textContent = '0 Stocks';
         return;
     }
 
-    userWatchlist.forEach(symbol => {
-        const stock = stocksData.find(s => s.symbol === symbol) || { symbol, name: 'Loading...', price: 0, change: 0, changePercent: 0 };
+    currentList.forEach(symbol => {
+        const stock = stocksData.find(s => s.symbol === symbol) || { symbol, name: 'Loading...', price: 0, change: '0.00%', isUp: true };
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${stock.symbol}</strong></td>
@@ -893,14 +905,14 @@ function renderWatchlistView() {
             <td class="${stock.isUp ? 'change-positive' : 'change-negative'}">
                 ${stock.change || '---'}
             </td>
-            <td><button class="logout-btn" onclick="toggleWatchlist('${stock.symbol}')">Remove</button></td>
+            <td><button class="logout-btn" onclick="event.stopPropagation(); toggleWatchlist('${stock.symbol}')">Remove</button></td>
         `;
         row.style.cursor = 'pointer';
         row.onclick = () => selectStock(stock);
         portfolioList.appendChild(row);
     });
 
-    watchlistCount.textContent = `${userWatchlist.length} Stocks in ${currentListName}`;
+    watchlistCount.textContent = `${currentList.length} Stocks in ${currentListName}`;
 }
 
 // --- App Initialization ---
