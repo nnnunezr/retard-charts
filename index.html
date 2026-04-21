@@ -35,7 +35,15 @@
             <h3 class="nav-title">Menu</h3>
             <ul class="nav-links">
                 <li class="active" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Market Overview</li>
-                <li id="nav-watchlist"><i class="fa-solid fa-star"></i> My Watchlist</li>
+                <li id="nav-watchlist"><i class="fa-solid fa-star"></i> All Watchlists</li>
+            </ul>
+
+            <div class="nav-section-header">
+                <h3 class="nav-title">My Lists</h3>
+                <button id="add-list-btn" class="add-btn"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <ul class="nav-links" id="user-lists-container">
+                <!-- User lists will be injected here -->
             </ul>
 
             <h3 class="nav-title">Sectors</h3>
@@ -112,18 +120,24 @@
                 </div>
             </div>
 
-            <section class="chart-section">
+            <!-- Chart Section (Hidden by default) -->
+            <div class="chart-section" id="chart-section" style="display: none;">
                 <div class="chart-header">
-                    <h2 id="chart-title">Select a stock to view details</h2>
+                    <h2 id="chart-title">Select a stock to view chart</h2>
                 </div>
                 <div class="chart-container">
                     <div id="tv_chart_container" style="height: 100%; width: 100%;"></div>
-                    <div class="source-icon">
-                        <i class="fa-solid fa-chart-line"></i>
-                        <span>TradingView</span>
-                    </div>
                 </div>
-            </section>
+            </div>
+
+            <!-- Chart Placeholder -->
+            <div id="chart-placeholder" class="chart-placeholder">
+                <div class="placeholder-content" style="text-align: center; padding: 60px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-chart-area" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                    <h3>No Stock Selected</h3>
+                    <p>Click on any stock card or watchlist item to view its real-time chart and AI analysis.</p>
+                </div>
+            </div>
         </main>
 
         <!-- AI Assistant Panel -->

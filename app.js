@@ -230,12 +230,18 @@ const logoutBtn = document.getElementById('logout-btn');
 const demoBypass = document.getElementById('demo-bypass');
 const navDashboard = document.getElementById('nav-dashboard');
 const navPortfolio = document.getElementById('nav-portfolio');
-const dashboardView = document.getElementById('dashboard-view');
 const portfolioView = document.getElementById('watchlist-view');
 const portfolioList = document.getElementById('watchlist-items-list');
 const watchlistCount = document.getElementById('watchlist-count');
 const watchlistSummary = document.getElementById('watchlist-summary');
-let userWatchlist = []; // Symbols of stocks being watched
+const userListsContainer = document.getElementById('user-lists-container');
+const addListBtn = document.getElementById('add-list-btn');
+const chartSection = document.getElementById('chart-section');
+const chartPlaceholder = document.getElementById('chart-placeholder');
+
+let userLists = { 'Main Watchlist': [] }; 
+let currentListName = 'Main Watchlist';
+let userWatchlist = userLists[currentListName]; // For backwards compatibility during transition
 const welcomeMsg = document.createElement('div');
 welcomeMsg.className = 'toast-notification';
 document.body.appendChild(welcomeMsg);
@@ -308,6 +314,11 @@ function renderCards(sector = 'All') {
 // Select a Stock
 function selectStock(stock) {
     currentStock = stock;
+    
+    // Toggle chart visibility
+    if (chartSection) chartSection.style.display = 'block';
+    if (chartPlaceholder) chartPlaceholder.style.display = 'none';
+
     renderCards(document.querySelector('#sector-filters li.active').dataset.sector);
     updateChart();
     
@@ -765,13 +776,92 @@ function setupEventListeners() {
     };
 }
 
-// --- Watchlist Logic ---
+// --- Multiple Watchlists Logic ---
+function renderUserLists() {
+    if (!userListsContainer) return;
+    userListsContainer.innerHTML = '';
+    
+    Object.keys(userLists).forEach(listName => {
+        const li = document.createElement('li');
+        li.className = listName === currentListName ? 'active' : '';
+        li.innerHTML = `
+            <a href="#" onclick="switchList('${listName}')">
+                <i class="fa-solid fa-list-ul"></i> ${listName}
+            </a>
+            ${listName !== 'Main Watchlist' ? `<i class="fa-solid fa-trash" onclick="deleteList('${listName}')" style="font-size: 10px; opacity: 0.5; cursor: pointer;"></i>` : ''}
+        `;
+        userListsContainer.appendChild(li);
+    });
+}
+
+function switchList(name) {
+    currentListName = name;
+    userWatchlist = userLists[currentListName];
+    renderUserLists();
+    renderWatchlistView();
+    showToast(`Switched to: ${name}`);
+}
+
+function createNewList() {
+    const name = prompt("Enter a name for your new list:");
+    if (name && !userLists[name]) {
+        userLists[name] = [];
+        switchList(name);
+        saveListsToDB();
+    }
+}
+
+async function deleteList(name) {
+    if (confirm(`Delete list "${name}"?`)) {
+        delete userLists[name];
+        if (currentListName === name) switchList('Main Watchlist');
+        renderUserLists();
+        saveListsToDB();
+    }
+}
+
+async function saveListsToDB() {
+    if (!supabaseClient || !currentUser || currentUser.id === 'guest-user') return;
+    // For simplicity, we'll store the list structure in user_metadata or a separate table
+    // For now, let's just save to localStorage for immediate 'various watchlists' feel
+    localStorage.setItem(`marketpulse_lists_${currentUser.id}`, JSON.stringify(userLists));
+}
+
+function loadListsFromDB() {
+    if (!currentUser) return;
+    const saved = localStorage.getItem(`marketpulse_lists_${currentUser.id}`);
+    if (saved) {
+        userLists = JSON.parse(saved);
+        if (!userLists[currentListName]) currentListName = Object.keys(userLists)[0];
+        userWatchlist = userLists[currentListName];
+    }
+    renderUserLists();
+}
+
+// Update toggleWatchlist to work with specific lists
+async function toggleWatchlist(symbol) {
+    if (userWatchlist.includes(symbol)) {
+        userWatchlist = userWatchlist.filter(s => s !== symbol);
+        userLists[currentListName] = userWatchlist;
+    } else {
+        userWatchlist.push(symbol);
+        userLists[currentListName] = userWatchlist;
+    }
+    
+    saveListsToDB();
+    renderCards();
+    renderWatchlistView();
+}
+
+if (addListBtn) addListBtn.onclick = createNewList;
+
+// --- Watchlist Rendering ---
 function renderWatchlistView() {
     if (!portfolioList) return;
     portfolioList.innerHTML = '';
     
     if (userWatchlist.length === 0) {
-        portfolioList.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">Your watchlist is empty. Add some stocks from the overview!</td></tr>';
+        portfolioList.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 40px;">List "${currentListName}" is empty. Add some stocks from the overview!</td></tr>`;
         watchlistCount.textContent = '0 Stocks';
         return;
     }
@@ -788,26 +878,12 @@ function renderWatchlistView() {
             </td>
             <td><button class="logout-btn" onclick="toggleWatchlist('${stock.symbol}')">Remove</button></td>
         `;
+        row.style.cursor = 'pointer';
+        row.onclick = () => selectStock(stock);
         portfolioList.appendChild(row);
     });
 
-    watchlistCount.textContent = `${userWatchlist.length} Stocks`;
-}
-
-async function toggleWatchlist(symbol) {
-    if (userWatchlist.includes(symbol)) {
-        userWatchlist = userWatchlist.filter(s => s !== symbol);
-        if (supabaseClient && currentUser && currentUser.id !== 'guest-user') {
-            await supabaseClient.from('watchlist').delete().eq('user_id', currentUser.id).eq('symbol', symbol);
-        }
-    } else {
-        userWatchlist.push(symbol);
-        if (supabaseClient && currentUser && currentUser.id !== 'guest-user') {
-            await supabaseClient.from('watchlist').insert([{ user_id: currentUser.id, symbol }]);
-        }
-    }
-    renderCards();
-    renderWatchlistView();
+    watchlistCount.textContent = `${userWatchlist.length} Stocks in ${currentListName}`;
 }
 
 // --- App Initialization ---
@@ -822,6 +898,8 @@ async function init() {
     
     // 3. Load cached prices and trigger update
     loadPriceCache();
+    loadListsFromDB(); // New: Load multiple lists
+    renderUserLists(); // New: Render sidebar lists
     renderCards();
     updateLivePrices();
     setInterval(updateLivePrices, 15000);
