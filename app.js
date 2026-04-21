@@ -321,8 +321,6 @@ sectorFilters.forEach(filter => {
 });
 
 // Ticker Search & Auto-Suggest
-const tickerSearch = document.getElementById('ticker-search');
-const searchResults = document.getElementById('search-results');
 let sp500Data = [];
 
 // Pre-load static stock list for instant, reliable auto-suggest (bypasses CORS/local file issues)
@@ -384,7 +382,7 @@ async function handleStockSelection(symbol, name) {
     selectStock(targetStock);
 }
 
-tickerSearch.addEventListener('input', (e) => {
+searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim().toLowerCase();
     
     if (query.length < 1) {
@@ -413,7 +411,7 @@ tickerSearch.addEventListener('input', (e) => {
             div.addEventListener('click', () => {
                 handleStockSelection(item.symbol, item.description);
                 searchResults.classList.remove('active');
-                tickerSearch.value = '';
+                searchInput.value = '';
             });
             searchResults.appendChild(div);
         });
@@ -421,9 +419,9 @@ tickerSearch.addEventListener('input', (e) => {
     searchResults.classList.add('active');
 });
 
-tickerSearch.addEventListener('keypress', (e) => {
+searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        const symbol = tickerSearch.value.trim().toUpperCase();
+        const symbol = searchInput.value.trim().toUpperCase();
         if (!symbol) return;
         
         // If they press enter, see if we have the real name, otherwise use symbol as name
@@ -432,7 +430,7 @@ tickerSearch.addEventListener('keypress', (e) => {
         
         handleStockSelection(symbol, name);
         searchResults.classList.remove('active');
-        tickerSearch.value = '';
+        searchInput.value = '';
     }
 });
 
