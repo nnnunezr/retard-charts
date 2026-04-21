@@ -30,7 +30,8 @@ let supabaseClient = null;
 try {
     if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY && 
         window.SUPABASE_URL !== 'INSERT_YOUR_SUPABASE_URL_HERE' && 
-        window.SUPABASE_URL.startsWith('http')) {
+        window.SUPABASE_URL.startsWith('http') &&
+        window.SUPABASE_ANON_KEY.startsWith('eyJ')) { // Added check for valid JWT format
         
         supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
         console.log("Supabase Client Initialized Successfully");
@@ -197,6 +198,7 @@ const authSubmitText = document.getElementById('auth-submit-text');
 const userProfile = document.getElementById('user-profile');
 const displayEmail = document.getElementById('display-email');
 const logoutBtn = document.getElementById('logout-btn');
+const demoBypass = document.getElementById('demo-bypass');
 const navDashboard = document.getElementById('nav-dashboard');
 const navPortfolio = document.getElementById('nav-portfolio');
 const dashboardView = document.getElementById('dashboard-view');
@@ -574,7 +576,11 @@ if (toggleAiBtn) {
 // Initialize
 // --- Auth Logic ---
 async function handleAuth(e) {
-    e.preventDefault();
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    console.log("handleAuth triggered, isSignUp:", isSignUp);
     authError.textContent = '';
     const email = authEmail.value;
     const password = authPassword.value;
@@ -707,6 +713,13 @@ function setupEventListeners() {
         console.log("Google button listener attached");
     }
 
+    if (demoBypass) {
+        demoBypass.onclick = (e) => {
+            e.preventDefault();
+            handleAuth(e);
+        };
+    }
+
     if (navDashboard) navDashboard.onclick = () => {
         dashboardView.style.display = 'block';
         portfolioView.style.display = 'none';
@@ -825,9 +838,25 @@ async function init() {
     // 1. Setup Listeners
     setupEventListeners();
 
-    // 2. Render initial UI immediately
-    renderCards();
-    updateChart();
+    // 2. Set Default Guest User (Bypass Login)
+    currentUser = { email: 'guest@marketpulse.app', id: 'guest-user', user_metadata: { full_name: 'Guest' } };
+    userProfile.style.display = 'block';
+    displayEmail.textContent = 'Guest Mode';
+    
+    // 3. Render initial UI safely
+    try {
+        renderCards();
+    } catch (e) { console.error("Cards render failed:", e); }
+
+    try {
+        if (window.TradingView) {
+            updateChart();
+        }
+    } catch (e) { console.error("Chart update failed:", e); }
+
+    // Start Demo Mode updates
+    updateLivePrices();
+    setInterval(updateLivePrices, 15000);
 
     if (!supabaseClient) {
         console.warn("Supabase not configured. Dashboard is in Read-Only Demo mode.");

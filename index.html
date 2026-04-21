@@ -150,7 +150,7 @@
     </div>
 
     <!-- Auth Modal -->
-    <div class="modal-overlay" id="auth-modal">
+    <div class="modal-overlay" id="auth-modal" style="display: none;">
         <div class="auth-card">
             <div class="auth-header">
                 <i class="fa-solid fa-arrow-trend-up"></i>
@@ -191,7 +191,11 @@
                 Continue with Google
             </button>
 
-            <p id="auth-error" class="auth-error-msg"></p>
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="#" id="demo-bypass" style="color: var(--text-secondary); font-size: 13px; text-decoration: none;">
+                    Continue in Demo Mode (Read-Only)
+                </a>
+            </div>
         </div>
     </div>
 
