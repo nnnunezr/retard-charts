@@ -122,6 +122,38 @@ async function fetchLivePrice(symbol) {
 }
 
 async function updateLivePrices() {
+    console.log("Fetching primary prices from Yahoo Finance...");
+    
+    // We'll fetch in parallel for speed
+    const fetchPromises = stocksData.map(async (stock) => {
+        try {
+            const data = await fetchLivePrice(stock.symbol);
+            if (data) {
+                stock.price = data.price;
+                const changeNum = ((data.price - data.prevClose) / data.prevClose * 100);
+                stock.change = (changeNum >= 0 ? '+' : '') + changeNum.toFixed(2) + '%';
+                stock.isUp = changeNum >= 0;
+                return true;
+            }
+        } catch (e) { return false; }
+        return false;
+    });
+
+    const results = await Promise.all(fetchPromises);
+    const successCount = results.filter(Boolean).length;
+
+    if (successCount > 0) {
+        console.log(`Yahoo Finance: Updated ${successCount} stocks.`);
+        savePriceCache();
+        renderCards(document.querySelector('#sector-filters li.active')?.dataset.sector || 'All');
+        renderWatchlistView();
+    } else {
+        console.warn("Yahoo Finance failed or rate limited, falling back to TradingView...");
+        await updateLivePricesTV();
+    }
+}
+
+async function updateLivePricesTV() {
     const tickers = stocksData.map(s => {
         const nasdaqTickers = ['NVDA', 'AMD', 'META', 'TSLA', 'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NFLX', 'QCOM', 'AVGO'];
         const exchange = s.exchange || (nasdaqTickers.includes(s.symbol) ? 'NASDAQ' : 'NYSE');
@@ -151,22 +183,10 @@ async function updateLivePrices() {
             });
             savePriceCache();
             renderCards(document.querySelector('#sector-filters li.active')?.dataset.sector || 'All');
-        } else {
-            throw new Error("Invalid TV data");
+            renderWatchlistView();
         }
     } catch (e) {
-        console.warn("TV Scan failed, trying Yahoo fallback...");
-        for (const stock of stocksData) {
-            const fresh = await fetchLivePrice(stock.symbol);
-            if (fresh) {
-                stock.price = fresh.price;
-                const change = ((fresh.price - fresh.prevClose) / fresh.prevClose) * 100;
-                stock.change = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-                stock.isUp = change >= 0;
-            }
-        }
-        savePriceCache();
-        renderCards(document.querySelector('#sector-filters li.active')?.dataset.sector || 'All');
+        console.error("All price sources failed.");
     }
 }
 
