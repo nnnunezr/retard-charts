@@ -231,7 +231,8 @@ const displayEmail = document.getElementById('display-email');
 const logoutBtn = document.getElementById('logout-btn');
 const demoBypass = document.getElementById('demo-bypass');
 const navDashboard = document.getElementById('nav-dashboard');
-const navPortfolio = document.getElementById('nav-portfolio');
+const dashboardView = document.getElementById('dashboard-view');
+const navPortfolio = document.getElementById('nav-watchlist');
 const portfolioView = document.getElementById('watchlist-view');
 const portfolioList = document.getElementById('watchlist-items-list');
 const watchlistCount = document.getElementById('watchlist-count');
@@ -243,6 +244,7 @@ const chartPlaceholder = document.getElementById('chart-placeholder');
 
 let userLists = { 'Main Watchlist': [] }; 
 let currentListName = 'Main Watchlist';
+let userWatchlist = []; // Global reference for current active list
 let chatHistory = [];
 let currentStock = null;
 const welcomeMsg = document.createElement('div');
