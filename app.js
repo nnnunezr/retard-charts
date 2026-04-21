@@ -189,6 +189,10 @@ const authPassword = document.getElementById('auth-password');
 const authError = document.getElementById('auth-error');
 const tabLogin = document.getElementById('tab-login');
 const tabSignup = document.getElementById('tab-signup');
+const authName = document.getElementById('auth-name');
+const authConfirmPassword = document.getElementById('auth-confirm-password');
+const nameGroup = document.getElementById('name-group');
+const confirmPasswordGroup = document.getElementById('confirm-password-group');
 const authSubmitText = document.getElementById('auth-submit-text');
 const userProfile = document.getElementById('user-profile');
 const displayEmail = document.getElementById('display-email');
@@ -574,19 +578,27 @@ async function handleAuth(e) {
     authError.textContent = '';
     const email = authEmail.value;
     const password = authPassword.value;
+    const name = authName.value;
+    const confirmPassword = authConfirmPassword.value;
+
+    if (isSignUp && password !== confirmPassword) {
+        authError.style.color = '#ef4444';
+        authError.textContent = "Passwords do not match!";
+        return;
+    }
 
     if (!supabaseClient) {
-        // DEMO MODE BYPASS: If no Supabase, just let them in for testing
+        // DEMO MODE BYPASS
         console.warn("No Supabase client, entering Demo Mode");
         showToast("Entering Demo Mode (No Database)", true);
-        currentUser = { email: email, id: 'demo-id' };
+        currentUser = { email: email, id: 'demo-id', user_metadata: { full_name: name || 'Guest' } };
         authModal.style.display = 'none';
         userProfile.style.display = 'block';
         displayEmail.textContent = email;
         
         const hour = new Date().getHours();
         const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
-        document.querySelector('header h1').textContent = `${greeting}, Guest!`;
+        document.querySelector('header h1').textContent = `${greeting}, ${name || 'Guest'}!`;
         
         renderCards();
         updateChart();
@@ -607,7 +619,10 @@ async function handleAuth(e) {
                 email, 
                 password,
                 options: {
-                    emailRedirectTo: window.location.href
+                    emailRedirectTo: window.location.origin,
+                    data: {
+                        full_name: name
+                    }
                 }
             });
             
@@ -670,6 +685,8 @@ function setupEventListeners() {
         tabLogin.classList.add('active');
         tabSignup.classList.remove('active');
         authSubmitText.textContent = 'Login';
+        nameGroup.style.display = 'none';
+        confirmPasswordGroup.style.display = 'none';
     };
 
     if (tabSignup) tabSignup.onclick = () => {
@@ -677,6 +694,8 @@ function setupEventListeners() {
         tabSignup.classList.add('active');
         tabLogin.classList.remove('active');
         authSubmitText.textContent = 'Sign Up';
+        nameGroup.style.display = 'block';
+        confirmPasswordGroup.style.display = 'block';
     };
 
     if (authForm) authForm.onsubmit = handleAuth;
@@ -829,7 +848,8 @@ async function init() {
             // Welcome header update
             const hour = new Date().getHours();
             const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
-            document.querySelector('header h1').textContent = `${greeting}, ${currentUser.email.split('@')[0]}!`;
+            const displayName = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+            document.querySelector('header h1').textContent = `${greeting}, ${displayName}!`;
 
             // Load user data
             await loadUserWatchlist();
