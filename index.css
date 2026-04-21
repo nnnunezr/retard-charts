@@ -444,9 +444,10 @@ header h1 {
 .chart-container {
     flex-grow: 1;
     position: relative;
-    min-height: 300px;
+    min-height: 500px;
     border-radius: 8px;
     overflow: hidden;
+    background: #131722;
 }
 
 .source-icon {

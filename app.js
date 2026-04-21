@@ -322,6 +322,12 @@ function selectStock(stock) {
     renderCards(document.querySelector('#sector-filters li.active').dataset.sector);
     updateChart();
     
+    // Clear old AI messages to prevent clutter
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+        chatHistory = [];
+    }
+    
     // Auto trigger chatbot for insights
     triggerAIAnalysis(stock);
 }
@@ -764,6 +770,11 @@ function setupEventListeners() {
         portfolioView.style.display = 'none';
         navDashboard.classList.add('active');
         document.getElementById('nav-watchlist').classList.remove('active');
+        
+        // Hide chart when going back to main overview
+        if (chartSection) chartSection.style.display = 'none';
+        if (chartPlaceholder) chartPlaceholder.style.display = 'block';
+        currentStock = null;
     };
 
     const navWatchlist = document.getElementById('nav-watchlist');
@@ -772,6 +783,12 @@ function setupEventListeners() {
         portfolioView.style.display = 'block';
         navWatchlist.classList.add('active');
         navDashboard.classList.remove('active');
+        
+        // Hide chart when going to watchlist overview
+        if (chartSection) chartSection.style.display = 'none';
+        if (chartPlaceholder) chartPlaceholder.style.display = 'block';
+        currentStock = null;
+        
         renderWatchlistView();
     };
 }
