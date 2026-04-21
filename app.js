@@ -146,6 +146,7 @@ async function updateLivePrices() {
             });
             
             console.log("Prices updated successfully from TradingView");
+            savePriceCache();
             const activeFilter = document.querySelector('#sector-filters li.active');
             renderCards(activeFilter ? activeFilter.dataset.sector : 'All');
         }
@@ -158,7 +159,11 @@ async function updateLivePrices() {
 
 // Secondary fallback using Yahoo or Hardcoded
 async function updatePricesFallback() {
-    for (let stock of stocksData) {
+    // Attempt to load from cache first
+    loadPriceCache();
+    renderCards();
+    
+    for (const stock of stocksData) {
         try {
             const data = await fetchLivePrice(stock.symbol);
             if (data) {
@@ -169,8 +174,32 @@ async function updatePricesFallback() {
             }
         } catch(e) {}
     }
+    savePriceCache();
     const activeFilter = document.querySelector('#sector-filters li.active');
     renderCards(activeFilter ? activeFilter.dataset.sector : 'All');
+}
+
+function savePriceCache() {
+    const cache = {};
+    stocksData.forEach(s => {
+        if (s.price > 0) cache[s.symbol] = { price: s.price, change: s.change, isUp: s.isUp };
+    });
+    localStorage.setItem('marketpulse_prices', JSON.stringify(cache));
+}
+
+function loadPriceCache() {
+    try {
+        const cache = JSON.parse(localStorage.getItem('marketpulse_prices'));
+        if (cache) {
+            stocksData.forEach(s => {
+                if (cache[s.symbol]) {
+                    s.price = cache[s.symbol].price;
+                    s.change = cache[s.symbol].change;
+                    s.isUp = cache[s.symbol].isUp;
+                }
+            });
+        }
+    } catch (e) {}
 }
 
 // DOM Elements
@@ -791,20 +820,18 @@ async function init() {
     userProfile.style.display = 'block';
     displayEmail.textContent = 'Guest Mode';
     
-    // 3. Render initial UI safely
-    try {
-        renderCards();
-    } catch (e) { console.error("Cards render failed:", e); }
-
+    // 3. Load cached prices and trigger update
+    loadPriceCache();
+    renderCards();
+    updateLivePrices();
+    setInterval(updateLivePrices, 15000);
+    
+    // 4. Render initial Chart safely
     try {
         if (window.TradingView) {
             updateChart();
         }
     } catch (e) { console.error("Chart update failed:", e); }
-
-    // Start Demo Mode updates
-    updateLivePrices();
-    setInterval(updateLivePrices, 15000);
 
     if (!supabaseClient) {
         console.warn("Supabase not configured. Dashboard is in Read-Only Demo mode.");
@@ -843,20 +870,31 @@ async function init() {
 }
 
 async function loadUserWatchlist() {
-    const { data, error } = await supabaseClient.from('watchlist').select('*').eq('user_id', currentUser.id).order('added_at', { ascending: false });
+    if (!supabaseClient || !currentUser || currentUser.id === 'guest-user') return;
     
-    if (!error && data && data.length > 0) {
-        stocksData = data.map(item => ({
-            symbol: item.symbol,
-            name: item.name || item.symbol,
-            sector: item.sector || 'Search',
-            price: 0,
-            change: '0.00%',
-            isUp: true,
-            domain: item.domain || `${item.symbol.toLowerCase()}.com`,
-            history: []
-        }));
+    const { data, error } = await supabaseClient.from('watchlist').select('*').eq('user_id', currentUser.id);
+    
+    if (!error && data) {
+        userWatchlist = data.map(item => item.symbol);
+        
+        // Add any missing watchlist stocks to the global stocksData so we can fetch their prices
+        data.forEach(item => {
+            if (!stocksData.find(s => s.symbol === item.symbol)) {
+                stocksData.push({
+                    symbol: item.symbol,
+                    name: item.name || item.symbol,
+                    sector: item.sector || 'Watchlist',
+                    price: 0,
+                    change: '0.00%',
+                    isUp: true,
+                    domain: `${item.symbol.toLowerCase()}.com`,
+                    history: []
+                });
+            }
+        });
+        
         renderCards();
+        updateLivePrices(); // Update prices immediately for the newly loaded watchlist
     }
 }
 
