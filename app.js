@@ -472,7 +472,7 @@ function removeLoading() {
 
 async function callGroqAPI(prompt) {
     try {
-        const proxyUrl = window.SECURE_PROXY_URL || "YOUR_DEPLOYED_PROXY_URL_HERE";
+        const proxyUrl = window.SECURE_PROXY_URL || "/api/analyze";
         const response = await fetch(proxyUrl, {
             method: "POST",
             headers: {
