@@ -34,8 +34,8 @@
 
             <h3 class="nav-title">Menu</h3>
             <ul class="nav-links">
-                <li class="active" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</li>
-                <li id="nav-portfolio"><i class="fa-solid fa-briefcase"></i> My Portfolio</li>
+                <li class="active" id="nav-dashboard"><i class="fa-solid fa-chart-line"></i> Market Overview</li>
+                <li id="nav-watchlist"><i class="fa-solid fa-star"></i> My Watchlist</li>
             </ul>
 
             <h3 class="nav-title">Sectors</h3>
@@ -75,39 +75,38 @@
                 </div>
             </header>
 
-            <!-- Top 5 Movers Cards (Main Dashboard View) -->
+            <!-- Market Overview View -->
             <div id="dashboard-view">
                 <div class="stock-cards" id="stock-cards-container">
                     <!-- Stock cards will be dynamically injected here -->
                 </div>
             </div>
 
-            <!-- Portfolio View (Hidden by default) -->
-            <div id="portfolio-view" style="display: none;">
+            <!-- Watchlist View -->
+            <div id="watchlist-view" style="display: none;">
                 <div class="portfolio-stats">
                     <div class="stat-card">
-                        <label>Total Value</label>
-                        <h2 id="portfolio-value">$0.00</h2>
+                        <label>Watchlist Items</label>
+                        <h2 id="watchlist-count">0 Stocks</h2>
                     </div>
                     <div class="stat-card">
-                        <label>Day Change</label>
-                        <h2 id="portfolio-change" class="change-positive">+$0.00 (0.00%)</h2>
+                        <label>List Summary</label>
+                        <h2 id="watchlist-summary">Monitoring Performance</h2>
                     </div>
                 </div>
                 <div class="portfolio-table-container">
                     <table class="portfolio-table">
                         <thead>
                             <tr>
-                                <th>Asset</th>
-                                <th>Shares</th>
-                                <th>Avg Price</th>
-                                <th>Current</th>
-                                <th>Profit/Loss</th>
-                                <th>Actions</th>
+                                <th>Symbol</th>
+                                <th>Company</th>
+                                <th>Price</th>
+                                <th>Day Change</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody id="portfolio-list">
-                            <!-- Portfolio items will be injected here -->
+                        <tbody id="watchlist-items-list">
+                            <!-- Watchlist items will be injected here -->
                         </tbody>
                     </table>
                 </div>
@@ -143,7 +142,7 @@
                 </div>
                 <div class="chat-input-area">
                     <input type="text" id="chat-input" placeholder="Ask about a stock...">
-                    <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button id="send-chat-btn"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
         </aside>
@@ -196,28 +195,6 @@
                     Continue in Demo Mode (Read-Only)
                 </a>
             </div>
-        </div>
-    </div>
-
-    <!-- Buy Modal -->
-    <div class="modal-overlay" id="buy-modal" style="display: none;">
-        <div class="auth-card">
-            <div class="auth-header">
-                <h2 id="buy-modal-title">Buy Stock</h2>
-                <p id="buy-modal-price">Current Price: $0.00</p>
-            </div>
-            <form id="buy-form" class="auth-form">
-                <div class="form-group">
-                    <label>Shares to Buy</label>
-                    <input type="number" id="buy-shares" value="1" min="1" required>
-                </div>
-                <div class="buy-summary">
-                    <span>Total Cost:</span>
-                    <span id="buy-total-cost">$0.00</span>
-                </div>
-                <button type="submit" class="auth-submit-btn">Confirm Purchase</button>
-                <button type="button" class="cancel-btn" id="close-buy-modal">Cancel</button>
-            </form>
         </div>
     </div>
 

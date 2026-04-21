@@ -202,15 +202,11 @@ const demoBypass = document.getElementById('demo-bypass');
 const navDashboard = document.getElementById('nav-dashboard');
 const navPortfolio = document.getElementById('nav-portfolio');
 const dashboardView = document.getElementById('dashboard-view');
-const portfolioView = document.getElementById('portfolio-view');
-const portfolioList = document.getElementById('portfolio-list');
-const portfolioValue = document.getElementById('portfolio-value');
-const portfolioChange = document.getElementById('portfolio-change');
-const buyModal = document.getElementById('buy-modal');
-const buySharesInput = document.getElementById('buy-shares');
-const buyTotalCost = document.getElementById('buy-total-cost');
-const closeBuyModal = document.getElementById('close-buy-modal');
-const buyForm = document.getElementById('buy-form');
+const portfolioView = document.getElementById('watchlist-view');
+const portfolioList = document.getElementById('watchlist-items-list');
+const watchlistCount = document.getElementById('watchlist-count');
+const watchlistSummary = document.getElementById('watchlist-summary');
+let userWatchlist = []; // Symbols of stocks being watched
 const welcomeMsg = document.createElement('div');
 welcomeMsg.className = 'toast-notification';
 document.body.appendChild(welcomeMsg);
@@ -268,8 +264,11 @@ function renderCards(sector = 'All') {
                     <i class="fa-solid ${stock.isUp ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'}"></i>
                     ${(stock.change === '0.00%' && !stock.price) ? '---' : stock.change}
                 </div>
-                <div style="margin-top: 12px;">
-                    <button class="buy-btn-small" onclick="event.stopPropagation(); openBuyModal('${stock.symbol}')">Buy</button>
+                <div style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button class="buy-btn-small" onclick="event.stopPropagation(); toggleWatchlist('${stock.symbol}')">
+                        <i class="fa-solid ${userWatchlist.includes(stock.symbol) ? 'fa-star' : 'fa-star-half-stroke'}"></i>
+                        ${userWatchlist.includes(stock.symbol) ? 'Unwatch' : 'Watch'}
+                    </button>
                 </div>
             `;
             cardsContainer.appendChild(card);
@@ -724,113 +723,62 @@ function setupEventListeners() {
         dashboardView.style.display = 'block';
         portfolioView.style.display = 'none';
         navDashboard.classList.add('active');
-        navPortfolio.classList.remove('active');
+        document.getElementById('nav-watchlist').classList.remove('active');
     };
 
-    if (navPortfolio) navPortfolio.onclick = () => {
+    const navWatchlist = document.getElementById('nav-watchlist');
+    if (navWatchlist) navWatchlist.onclick = () => {
         dashboardView.style.display = 'none';
         portfolioView.style.display = 'block';
-        navPortfolio.classList.add('active');
+        navWatchlist.classList.add('active');
         navDashboard.classList.remove('active');
-        renderPortfolio();
+        renderWatchlistView();
     };
 }
 
-// --- Portfolio Logic ---
-let stockToBuy = null;
-
-function openBuyModal(symbol) {
-    stockToBuy = stocksData.find(s => s.symbol === symbol);
-    if (!stockToBuy) return;
-    
-    document.getElementById('buy-modal-title').textContent = `Buy ${stockToBuy.symbol}`;
-    document.getElementById('buy-modal-price').textContent = `Current Price: $${stockToBuy.price.toFixed(2)}`;
-    updateBuyTotal();
-    buyModal.style.display = 'flex';
-}
-
-function updateBuyTotal() {
-    const shares = parseInt(buySharesInput.value) || 0;
-    const total = shares * (stockToBuy ? stockToBuy.price : 0);
-    buyTotalCost.textContent = `$${total.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-}
-
-buySharesInput.oninput = updateBuyTotal;
-closeBuyModal.onclick = () => buyModal.style.display = 'none';
-
-buyForm.onsubmit = async (e) => {
-    e.preventDefault();
-    if (!currentUser || !stockToBuy) return;
-
-    const shares = parseInt(buySharesInput.value);
-    const price = stockToBuy.price;
-
-    try {
-        const { error } = await supabaseClient.from('portfolio').insert([{
-            user_id: currentUser.id,
-            symbol: stockToBuy.symbol,
-            shares: shares,
-            average_price: price
-        }]);
-
-        if (error) throw error;
-        
-        buyModal.style.display = 'none';
-        await loadPortfolio();
-        renderPortfolio();
-        alert(`Successfully purchased ${shares} shares of ${stockToBuy.symbol}!`);
-    } catch (err) {
-        alert("Error purchasing stock: " + err.message);
-    }
-};
-
-async function loadPortfolio() {
-    if (!currentUser) return;
-    const { data, error } = await supabaseClient.from('portfolio').select('*').eq('user_id', currentUser.id);
-    if (!error) portfolioData = data;
-}
-
-function renderPortfolio() {
+// --- Watchlist Logic ---
+function renderWatchlistView() {
+    if (!portfolioList) return;
     portfolioList.innerHTML = '';
-    let totalValue = 0;
+    
+    if (userWatchlist.length === 0) {
+        portfolioList.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">Your watchlist is empty. Add some stocks from the overview!</td></tr>';
+        watchlistCount.textContent = '0 Stocks';
+        return;
+    }
 
-    portfolioData.forEach(item => {
-        const currentPrice = stocksData.find(s => s.symbol === item.symbol)?.price || item.average_price;
-        const value = item.shares * currentPrice;
-        const cost = item.shares * item.average_price;
-        const profit = value - cost;
-        const profitPercent = (profit / cost) * 100;
-        
-        totalValue += value;
-
+    userWatchlist.forEach(symbol => {
+        const stock = stocksData.find(s => s.symbol === symbol) || { symbol, name: 'Loading...', price: 0, change: 0, changePercent: 0 };
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>
-                <div class="portfolio-asset">
-                    <strong>${item.symbol}</strong>
-                </div>
+            <td><strong>${stock.symbol}</strong></td>
+            <td>${stock.name}</td>
+            <td>$${stock.price ? stock.price.toFixed(2) : '---'}</td>
+            <td class="${stock.isUp ? 'change-positive' : 'change-negative'}">
+                ${stock.change || '---'}
             </td>
-            <td>${item.shares}</td>
-            <td>$${item.average_price.toFixed(2)}</td>
-            <td>$${currentPrice.toFixed(2)}</td>
-            <td class="${profit >= 0 ? 'change-positive' : 'change-negative'}">
-                $${profit.toFixed(2)} (${profitPercent.toFixed(2)}%)
-            </td>
-            <td><button class="logout-btn" onclick="sellStock('${item.id}')">Sell</button></td>
+            <td><button class="logout-btn" onclick="toggleWatchlist('${stock.symbol}')">Remove</button></td>
         `;
         portfolioList.appendChild(row);
     });
 
-    portfolioValue.textContent = `$${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    watchlistCount.textContent = `${userWatchlist.length} Stocks`;
 }
 
-async function sellStock(id) {
-    if (!confirm("Are you sure you want to sell this holding?")) return;
-    const { error } = await supabaseClient.from('portfolio').delete().eq('id', id);
-    if (!error) {
-        await loadPortfolio();
-        renderPortfolio();
+async function toggleWatchlist(symbol) {
+    if (userWatchlist.includes(symbol)) {
+        userWatchlist = userWatchlist.filter(s => s !== symbol);
+        if (supabaseClient && currentUser && currentUser.id !== 'guest-user') {
+            await supabaseClient.from('watchlist').delete().eq('user_id', currentUser.id).eq('symbol', symbol);
+        }
+    } else {
+        userWatchlist.push(symbol);
+        if (supabaseClient && currentUser && currentUser.id !== 'guest-user') {
+            await supabaseClient.from('watchlist').insert([{ user_id: currentUser.id, symbol }]);
+        }
     }
+    renderCards();
+    renderWatchlistView();
 }
 
 // --- App Initialization ---
@@ -882,7 +830,6 @@ async function init() {
 
             // Load user data
             await loadUserWatchlist();
-            await loadPortfolio();
             
             // Start price updates
             await updateLivePrices();
