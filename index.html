@@ -208,10 +208,9 @@
         </div>
     </div>
 
-    <!-- Hidden config to pass API Key securely from the prompt context -->
-    <!-- For security in production, never put API keys in frontend code. -->
+    <!-- Secure Proxy Config -->
     <script>
-        window.GROQ_API_KEY = "INSERT_YOUR_GROQ_API_KEY_HERE";
+        window.SECURE_PROXY_URL = ""; // Paste your proxy URL here after deployment
     </script>
     <script src="app.js"></script>
 </body>

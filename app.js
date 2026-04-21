@@ -471,16 +471,11 @@ function removeLoading() {
 }
 
 async function callGroqAPI(prompt) {
-    const apiKey = window.GROQ_API_KEY;
-    if (!apiKey || apiKey === "INSERT_YOUR_GROQ_API_KEY_HERE") {
-        return "⚠️ Error: Groq API key is missing or invalid. Please check your configuration.";
-    }
-
     try {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const proxyUrl = window.SECURE_PROXY_URL || "YOUR_DEPLOYED_PROXY_URL_HERE";
+        const response = await fetch(proxyUrl, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
